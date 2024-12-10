@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SKCET Campus Navigator</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <!-- Leaflet Routing Machine CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Ensure the map is visible */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 80vh; /* Adjust as needed */
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>SKCET Campus Navigator</h1>
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="Search for a location...">
+            <button id="search-button">Search</button>
+            <button id="locate-button">My Location</button> <!-- Locate Me Button -->
+        </div>
+    </header>
+    
+    <main>
+        <div id="map"></div>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 SKCET Campus Navigator</p>
+    </footer>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <!-- Leaflet Routing Machine JS -->
+    <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
+    <!-- Leaflet Control Geocoder (optional for better geocoding) -->
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <!-- Custom JS -->
+    <script src="js/script.js"></script>
+</body>
+</html>

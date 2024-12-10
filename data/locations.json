@@ -1,0 +1,39 @@
+[
+    {
+        "name": "Main Library",
+        "latitude": 11.0167,
+        "longitude": 76.9600,
+        "type": "Library"
+    },
+    {
+        "name": "Engineering Department",
+        "latitude": 11.0160,
+        "longitude": 76.9585,
+        "type": "Academic"
+    },
+    {
+        "name": "Cafeteria",
+        "latitude": 11.0163,
+        "longitude": 76.9598,
+        "type": "Food"
+    },
+    {
+        "name": "Hostel A",
+        "latitude": 11.0168,
+        "longitude": 76.9605,
+        "type": "Accommodation"
+    },
+    {
+        "name": "Gymnasium",
+        "latitude": 11.0162,
+        "longitude": 76.9588,
+        "type": "Recreation"
+    },
+    {
+        "name": "ECE block",
+        "latitude": 10.9362490778562, 
+        "longitude":76.95621772366506,
+        "type": "Recreation"
+    }
+  
+]
