@@ -5,32 +5,25 @@
 // ===============================
 
 /*
- * This script initializes the Leaflet map centered on SKCET Coimbatore,
- * outlines the campus boundaries with a polygon, adds custom markers for various locations,
- * tracks the user's real-time location, and provides navigation routes from the user's
- * location to searched destinations through the campus entrance.
+ * Initializes the Leaflet map, adds markers, handles search and routing,
+ * and manages a responsive routing interface for mobile devices.
  */
 
 // ===============================
 // 1. Map Initialization
 // ===============================
 
-// Accurate SKCET Coimbatore coordinates
 const campusCoordinates = [10.93919538852309, 76.95196394531337];
+const map = L.map('map').setView(campusCoordinates, 18);
 
-// Initialize the map centered on SKCET Coimbatore
-const map = L.map('map').setView(campusCoordinates, 18); // Zoom level 18 for detailed campus view
-
-// Add OpenStreetMap tiles as the base layer
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
 // ===============================
-// 2. Define Campus Boundary as a Polygon
+// 2. Campus Boundary
 // ===============================
 
-// Array of [latitude, longitude] pairs defining the campus boundary
 const campusBoundaryCoordinates = [
     [10.939331725891414, 76.95205903546925],
     [10.939055866893337, 76.95308789800902],
@@ -53,25 +46,22 @@ const campusBoundaryCoordinates = [
     [10.939331725891414, 76.95205903546925] // Closing the polygon by repeating the first coordinate
 ];
 
-// Create a polygon to outline the campus boundary
-const campusBoundary = L.polygon(campusBoundaryCoordinates, {
-    color: "#ff7800",        // Border color
-    weight: 2,               // Border thickness
-    fillOpacity: 0.1         // Fill transparency
+L.polygon(campusBoundaryCoordinates, {
+    color: "#ff7800",
+    weight: 2,
+    fillOpacity: 0.1
 }).addTo(map)
   .bindPopup("SKCET Coimbatore Campus Boundary");
 
 // ===============================
-// 3. Define Entrance Coordinate
+// 3. Entrance Marker
 // ===============================
 
-// The single entrance coordinate
 const entranceCoordinate = [10.93907701406342, 76.95194231481806];
 
-// Optionally, add a marker for the entrance
-const entranceMarker = L.marker(entranceCoordinate, {
+L.marker(entranceCoordinate, {
     icon: L.icon({
-        iconUrl: '../assets/entrance.png', // Ensure you have an 'entrance.png' icon in assets
+        iconUrl: '../assets/entrance.png', // Ensure this path is correct
         iconSize: [30, 30],
         iconAnchor: [15, 30],
         popupAnchor: [0, -30]
@@ -80,7 +70,7 @@ const entranceMarker = L.marker(entranceCoordinate, {
   .bindPopup("<b>Entrance</b><br>This is the main entrance.");
 
 // ===============================
-// 4. Custom Icons for Different Location Types
+// 4. Custom Icons
 // ===============================
 
 const icons = {
@@ -126,8 +116,8 @@ const icons = {
 // 5. Variables to Store User Location and Routing Control
 // ===============================
 
-let userMarker = null;       // To store the user's current location marker
-let routingControl = null;   // To store the routing control
+let userMarker = null;
+let routingControl = null;
 
 // ===============================
 // 6. Function to Load Locations from JSON
@@ -170,7 +160,129 @@ function addMarkers(map, locations) {
 }
 
 // ===============================
-// 8. Function to Handle Search Functionality
+// 8. User Location Tracking
+// ===============================
+
+/**
+ * Tracks the user's real-time location and updates the map accordingly.
+ */
+function trackUserLocation() {
+    if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser.');
+        return;
+    }
+
+    const options = {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 27000
+    };
+
+    function success(position) {
+        const latitude  = position.coords.latitude;
+        const longitude = position.coords.longitude;
+        const accuracy = position.coords.accuracy;
+
+        console.log(`User's current position: [${latitude}, ${longitude}] with accuracy ${accuracy} meters.`);
+
+        if (!userMarker) {
+            userMarker = L.marker([latitude, longitude], { 
+                icon: L.icon({
+                    iconUrl: '../assets/user-location.png', // Ensure this path is correct
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30],
+                    popupAnchor: [0, -30]
+                }),
+                title: 'Your Location'
+            }).addTo(map)
+              .bindPopup('You are here.')
+              .openPopup();
+
+            map.setView([latitude, longitude], 17);
+        } else {
+            userMarker.setLatLng([latitude, longitude]);
+        }
+    }
+
+    function error(err) {
+        console.warn(`ERROR(${err.code}): ${err.message}`);
+        switch(err.code) {
+            case err.PERMISSION_DENIED:
+                alert("Permission denied. Unable to access your location.");
+                break;
+            case err.POSITION_UNAVAILABLE:
+                alert("Position unavailable. Please check your network or GPS.");
+                break;
+            case err.TIMEOUT:
+                alert("Geolocation request timed out. Please try again.");
+                break;
+            default:
+                alert("An unknown error occurred.");
+                break;
+        }
+    }
+
+    navigator.geolocation.watchPosition(success, error, options);
+}
+
+// ===============================
+// 9. Locate Me Button
+// ===============================
+
+/**
+ * Centers the map on the user's current location when the "Locate Me" button is clicked.
+ */
+function handleLocateButton() {
+    const locateButton = document.getElementById('locate-button');
+
+    locateButton.addEventListener('click', () => {
+        if (userMarker) {
+            map.setView(userMarker.getLatLng(), 17);
+            userMarker.openPopup();
+        } else {
+            alert('Fetching your location...');
+        }
+    });
+}
+
+// ===============================
+// 10. Geocoding Function
+// ===============================
+
+/**
+ * Geocodes a location name to latitude and longitude using Nominatim.
+ * @param {string} location - The name/address of the location to geocode.
+ * @returns {Promise<Object|null>} A promise that resolves to an object with 'lat' and 'lng', or null if not found.
+ */
+async function geocodeLocation(location) {
+    const encodedLocation = encodeURIComponent(location);
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedLocation}`;
+
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'Accept-Language': 'en',
+                'User-Agent': 'SKCET-Campus-Navigator/1.0' // Nominatim requires a valid User-Agent
+            }
+        });
+        const data = await response.json();
+
+        if (data && data.length > 0) {
+            return {
+                lat: parseFloat(data[0].lat),
+                lng: parseFloat(data[0].lon)
+            };
+        } else {
+            return null;
+        }
+    } catch (error) {
+        console.error('Error geocoding location:', error);
+        return null;
+    }
+}
+
+// ===============================
+// 11. Handle Search Functionality
 // ===============================
 
 /**
@@ -206,10 +318,15 @@ function handleSearch(map, locations) {
         const found = locations.find(loc => loc.name.toLowerCase() === query);
 
         if (found) {
-            // If user location is available, set it as the start point
             if (userMarker) {
                 const userCoords = userMarker.getLatLng();
-                plotRoute(userCoords, [found.latitude, found.longitude]);
+
+                // If user's location is the entrance, plot route directly to destination
+                if (userCoords.lat === entranceCoordinate[0] && userCoords.lng === entranceCoordinate[1]) {
+                    plotRoute(entranceCoordinate, [found.latitude, found.longitude]);
+                } else {
+                    plotRoute(userCoords, [found.latitude, found.longitude]);
+                }
             } else {
                 // Center the map on the found location
                 map.setView([found.latitude, found.longitude], 18);
@@ -234,15 +351,97 @@ function handleSearch(map, locations) {
 }
 
 // ===============================
-// 9. Function to Plot a Route Through Entrance
+// 12. Routing Panel for Mobile
+// ===============================
+
+/**
+ * Toggles the visibility of the routing panel on mobile devices.
+ */
+function setupRoutingPanel() {
+    const routingButton = document.getElementById('routing-button');
+    const routingPanel = document.getElementById('routing-panel');
+    const routeButton = document.getElementById('route-button');
+    const startInput = document.getElementById('start-input');
+    const endInput = document.getElementById('end-input');
+
+    // Show the routing button on mobile
+    routingButton.classList.remove('hidden');
+
+    // Toggle the routing panel when the button is clicked
+    routingButton.addEventListener('click', () => {
+        routingPanel.classList.toggle('active');
+    });
+
+    // Handle the route button click
+    routeButton.addEventListener('click', () => {
+        const startQuery = startInput.value.trim();
+        const endQuery = endInput.value.trim();
+
+        if (endQuery === '') {
+            alert('Please enter an end location.');
+            return;
+        }
+
+        if (startQuery === '' && userMarker) {
+            const userCoords = userMarker.getLatLng();
+            geocodeLocation(endQuery)
+                .then(endCoords => {
+                    if (endCoords) {
+                        plotRoute(userCoords, endCoords);
+                        routingPanel.classList.remove('active'); // Hide the panel after routing
+                    } else {
+                        alert('End location could not be found.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Geocoding error:', error);
+                    alert('An error occurred while geocoding the end location.');
+                });
+        } else if (startQuery !== '' && endQuery !== '') {
+            // Geocode both start and end locations
+            Promise.all([geocodeLocation(startQuery), geocodeLocation(endQuery)])
+                .then(([startCoords, endCoords]) => {
+                    if (startCoords && endCoords) {
+                        plotRoute(startCoords, endCoords);
+                        routingPanel.classList.remove('active'); // Hide the panel after routing
+                    } else {
+                        alert('One or both locations could not be found.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Geocoding error:', error);
+                    alert('An error occurred while geocoding the locations.');
+                });
+        } else {
+            alert('Please enter both start and end locations.');
+        }
+    });
+}
+
+/**
+ * Initializes the custom routing panel for mobile devices.
+ */
+function initializeRoutingPanel() {
+    // Detect if the device is mobile based on screen width
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
+    if (isMobile) {
+        setupRoutingPanel();
+    }
+}
+
+// ===============================
+// 13. Function to Plot a Route Through Entrance
 // ===============================
 
 /**
  * Plots a route from the start point to the end point via the entrance.
  * @param {Object} start - The starting point with 'lat' and 'lng' properties.
- * @param {Array} end - The ending point as [latitude, longitude].
+ * @param {Array|Object} end - The ending point as [latitude, longitude] or {lat, lng}.
  */
 function plotRoute(start, end) {
+    console.log("Initiating route calculation.");
+
     if (routingControl) {
         map.removeControl(routingControl);
     }
@@ -250,12 +449,30 @@ function plotRoute(start, end) {
     // Define the entrance as an intermediate waypoint
     const entrance = L.latLng(entranceCoordinate[0], entranceCoordinate[1]);
 
+    // Initialize waypoints
+    let waypoints = [];
+
+    // If start is not the entrance, add it
+    if (!(start.lat === entrance.lat && start.lng === entrance.lng)) {
+        waypoints.push(L.latLng(start.lat, start.lng));
+    }
+
+    // Add entrance
+    waypoints.push(entrance);
+
+    // Determine end coordinates
+    let endCoords;
+    if (Array.isArray(end)) {
+        endCoords = L.latLng(end[0], end[1]);
+    } else {
+        endCoords = L.latLng(end.lat, end.lng);
+    }
+
+    // Add end waypoint
+    waypoints.push(endCoords);
+
     routingControl = L.Routing.control({
-        waypoints: [
-            L.latLng(start.lat, start.lng), // Start
-            entrance,                        // Entrance
-            L.latLng(end[0], end[1])         // End
-        ],
+        waypoints: waypoints,
         lineOptions: {
             styles: [{ color: '#6FA1EC', weight: 4 }]
         },
@@ -265,104 +482,50 @@ function plotRoute(start, end) {
         show: true,
         routeWhileDragging: false
     }).addTo(map);
-}
 
-// ===============================
-// 10. Function to Handle Real-Time User Location Tracking
-// ===============================
+    // Listen for routing events to handle success or error
+    routingControl.on('routesfound', function(e) {
+        console.log("Route found.");
+    });
 
-/**
- * Tracks the user's real-time location and updates the map accordingly.
- */
-function trackUserLocation() {
-    if (!navigator.geolocation) {
-        alert('Geolocation is not supported by your browser.');
-        return;
-    }
-
-    // Options for geolocation
-    const options = {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 27000
-    };
-
-    // Success callback
-    function success(position) {
-        const latitude  = position.coords.latitude;
-        const longitude = position.coords.longitude;
-        const accuracy = position.coords.accuracy;
-
-        console.log(`User's current position: [${latitude}, ${longitude}] with accuracy ${accuracy} meters.`);
-
-        // If user marker doesn't exist, create it
-        if (!userMarker) {
-            userMarker = L.marker([latitude, longitude], { 
-                icon: L.icon({
-                    iconUrl: '../assets/user-location.png', // Ensure this path is correct
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 30],
-                    popupAnchor: [0, -30]
-                }),
-                title: 'Your Location'
-            }).addTo(map)
-              .bindPopup('You are here.')
-              .openPopup();
-
-            // Optionally, set the map view to the user's location
-            map.setView([latitude, longitude], 17);
-        } else {
-            // Update the user's marker position
-            userMarker.setLatLng([latitude, longitude]);
-        }
-    }
-
-    // Error callback
-    function error(err) {
-        console.warn(`ERROR(${err.code}): ${err.message}`);
-        switch(err.code) {
-            case err.PERMISSION_DENIED:
-                alert("Permission denied. Unable to access your location.");
-                break;
-            case err.POSITION_UNAVAILABLE:
-                alert("Position unavailable. Please check your network or GPS.");
-                break;
-            case err.TIMEOUT:
-                alert("Geolocation request timed out. Please try again.");
-                break;
-            default:
-                alert("An unknown error occurred.");
-                break;
-        }
-    }
-
-    // Start watching the user's position
-    navigator.geolocation.watchPosition(success, error, options);
-}
-
-// ===============================
-// 11. Function to Handle the "Locate Me" Button
-// ===============================
-
-/**
- * Centers the map on the user's current location when the "Locate Me" button is clicked.
- */
-function handleLocateButton() {
-    const locateButton = document.getElementById('locate-button');
-
-    locateButton.addEventListener('click', () => {
-        if (userMarker) {
-            map.setView(userMarker.getLatLng(), 17);
-            userMarker.openPopup();
-        } else {
-            alert('Fetching your location...');
-            // The location will be updated via watchPosition
-        }
+    routingControl.on('routingerror', function(e) {
+        console.log("Routing error.");
+        alert("An error occurred while calculating the route.");
     });
 }
 
 // ===============================
-// 12. Initialization Function
+// 14. Load Custom Road GeoJSON
+// ===============================
+
+/**
+ * Loads the custom road GeoJSON and adds it to the map.
+ */
+async function loadCustomRoads() {
+    try {
+        const response = await fetch('data/custom_road.geojson');
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const geojsonData = await response.json();
+        L.geoJSON(geojsonData, {
+            style: {
+                color: "red",      // Color of the custom road
+                weight: 4          // Thickness of the road line
+            },
+            onEachFeature: function (feature, layer) {
+                if (feature.properties && feature.properties.name) {
+                    layer.bindPopup(`<b>${feature.properties.name}</b>`);
+                }
+            }
+        }).addTo(map);
+    } catch (error) {
+        console.error('Error loading custom roads:', error);
+    }
+}
+
+// ===============================
+// 15. Initialization Function
 // ===============================
 
 /**
@@ -374,7 +537,8 @@ async function init() {
     handleSearch(map, locations);
     trackUserLocation();
     handleLocateButton();
+    await loadCustomRoads(); // Load custom roads after other initializations
+    initializeRoutingPanel(); // Initialize the custom routing panel
 }
 
-// Run the initialization function when the page loads
 window.onload = init;

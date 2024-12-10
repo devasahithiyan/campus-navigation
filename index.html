@@ -2,37 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SKCET Campus Navigator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <!-- Leaflet Routing Machine CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+    <!-- Awesomplete CSS for Autocomplete (Optional) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.css" integrity="sha512-rvyIR8x9ff3kKgH1HzrtVasGWy5a1fUkYUBqJ+WlVMHFxP2wm1EVUAf4J1iP4zSphHJjN87DGnjzx3XEKSlrZA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/styles.css">
-    <style>
-        /* Ensure the map is visible */
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
-        #map {
-            height: 80vh; /* Adjust as needed */
-            width: 100%;
-        }
-    </style>
 </head>
 <body>
     <header>
         <h1>SKCET Campus Navigator</h1>
         <div class="search-container">
-            <input type="text" id="search-input" placeholder="Search for a location...">
-            <button id="search-button">Search</button>
-            <button id="locate-button">My Location</button> <!-- Locate Me Button -->
+            <input type="text" id="search-input" placeholder="Search for a location..." aria-label="Search for a location">
+            <button id="search-button" aria-label="Search">Search</button>
+            <button id="locate-button" aria-label="Locate Me">My Location</button> <!-- Locate Me Button -->
         </div>
     </header>
-    
+
     <main>
         <div id="map"></div>
     </main>
@@ -41,12 +31,25 @@
         <p>&copy; 2024 SKCET Campus Navigator</p>
     </footer>
 
+    <!-- Custom Routing Button for Mobile -->
+    <button id="routing-button" class="hidden" aria-label="Open Directions Panel">Directions</button>
+
+    <!-- Custom Routing Panel for Mobile -->
+    <div id="routing-panel" class="hidden" aria-live="polite">
+        <h3>Get Directions</h3>
+        <input type="text" id="start-input" placeholder="Start Location" aria-label="Start Location">
+        <input type="text" id="end-input" placeholder="End Location" aria-label="End Location">
+        <button id="route-button" aria-label="Get Route">Get Route</button>
+    </div>
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <!-- Leaflet Routing Machine JS -->
     <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
     <!-- Leaflet Control Geocoder (optional for better geocoding) -->
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <!-- Awesomplete JS for Autocomplete (Optional) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.js" integrity="sha512-gbLWZFSIW6eizSEulNNsjPHxtSC99fjRnBvklhI7YAG+7sYc16iXyW+HCe+6TZPU9LPbYVM14H/xQh71Uv6Fgw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <!-- Custom JS -->
     <script src="js/script.js"></script>
 </body>
