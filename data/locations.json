@@ -1,39 +1,56 @@
 [
+   
     {
-        "name": "Main Library",
-        "latitude": 11.0167,
-        "longitude": 76.9600,
-        "type": "Library"
-    },
-    {
-        "name": "Engineering Department",
-        "latitude": 11.0160,
-        "longitude": 76.9585,
-        "type": "Academic"
-    },
-    {
-        "name": "Cafeteria",
-        "latitude": 11.0163,
-        "longitude": 76.9598,
-        "type": "Food"
-    },
-    {
-        "name": "Hostel A",
-        "latitude": 11.0168,
-        "longitude": 76.9605,
+        "name": "Krishna square",
+        "latitude": 10.937978929686855, 
+        "longitude": 76.9553835559807,
         "type": "Accommodation"
     },
-    {
-        "name": "Gymnasium",
-        "latitude": 11.0162,
-        "longitude": 76.9588,
-        "type": "Recreation"
-    },
+    
     {
         "name": "ECE block",
         "latitude": 10.9362490778562, 
         "longitude":76.95621772366506,
         "type": "Recreation"
+    },
+    {
+        "name": "C1 block",
+        "latitude": 10.937190115649132, 
+        "longitude":76.95616602213165,
+        "type": "Recreation"
+    },
+    {
+        "name": "Admin block",
+        "latitude": 10.937779571414586, 
+        "longitude":76.95638488209566,
+        "type": "Recreation"
+    } , 
+    {
+        "name": "Sports ground",
+        "latitude": 10.937315353463866, 
+        "longitude":76.95697176899634,
+        "type": "Recreation"
+    },
+    {
+        "name": "Food Court",
+        "latitude": 10.938722202923008,
+        "longitude": 76.9566800531989,
+        "type": "Food & Beverage"
+    },
+    {
+        "name": "C2 Block",
+        "latitude": 10.937216352340572,
+        "longitude": 76.95656222244696,
+        "type": "Academic Block"
+    },
+    {
+        "name": "Civil Block",
+        "latitude": 10.93641516063983,
+        "longitude": 76.95590294859045,
+        "type": "Academic Block"
     }
+    
+    
+     
   
 ]

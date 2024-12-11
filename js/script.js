@@ -5,8 +5,8 @@
 // ===============================
 
 /*
- * Initializes the Leaflet map, adds markers, handles search and routing,
- * and manages a responsive routing interface for mobile devices.
+ * Initializes the Leaflet map, adds markers, handles sidebar navigation and location selection,
+ * tracks user location in real-time, and displays a distance indicator.
  */
 
 // ===============================
@@ -118,6 +118,8 @@ const icons = {
 
 let userMarker = null;
 let routingControl = null;
+let destination = null; // To store the current destination
+let distanceIndicatorControl = null;
 
 // ===============================
 // 6. Function to Load Locations from JSON
@@ -202,6 +204,12 @@ function trackUserLocation() {
         } else {
             userMarker.setLatLng([latitude, longitude]);
         }
+
+        // If a destination is set, update the route and distance
+        if (destination) {
+            plotRoute({ lat: latitude, lng: longitude }, destination);
+            updateDistanceIndicator({ lat: latitude, lng: longitude }, destination);
+        }
     }
 
     function error(err) {
@@ -226,208 +234,131 @@ function trackUserLocation() {
 }
 
 // ===============================
-// 9. Locate Me Button
+// 9. Handle Sidebar Toggle
 // ===============================
 
 /**
- * Centers the map on the user's current location when the "Locate Me" button is clicked.
+ * Handles the opening and closing of the places sidebar with toggle functionality.
  */
-function handleLocateButton() {
-    const locateButton = document.getElementById('locate-button');
+function handleSidebar() {
+    const viewPlacesButton = document.getElementById('view-places-button');
+    const closeSidebarButton = document.getElementById('close-sidebar-button');
+    const placesSidebar = document.getElementById('places-sidebar');
 
-    locateButton.addEventListener('click', () => {
-        if (userMarker) {
-            map.setView(userMarker.getLatLng(), 17);
-            userMarker.openPopup();
+    viewPlacesButton.addEventListener('click', () => {
+        const isOpen = placesSidebar.classList.contains('open');
+        if (isOpen) {
+            placesSidebar.classList.remove('open');
+            placesSidebar.setAttribute('aria-hidden', 'true');
         } else {
-            alert('Fetching your location...');
+            placesSidebar.classList.add('open');
+            placesSidebar.setAttribute('aria-hidden', 'false');
+        }
+    });
+
+    closeSidebarButton.addEventListener('click', () => {
+        placesSidebar.classList.remove('open');
+        placesSidebar.setAttribute('aria-hidden', 'true');
+    });
+
+    // Close sidebar when clicking outside of it
+    document.addEventListener('click', (e) => {
+        if (!placesSidebar.contains(e.target) && !viewPlacesButton.contains(e.target)) {
+            placesSidebar.classList.remove('open');
+            placesSidebar.setAttribute('aria-hidden', 'true');
         }
     });
 }
 
 // ===============================
-// 10. Geocoding Function
+// 10. Handle Labs Expand/Collapse
 // ===============================
 
 /**
- * Geocodes a location name to latitude and longitude using Nominatim.
- * @param {string} location - The name/address of the location to geocode.
- * @returns {Promise<Object|null>} A promise that resolves to an object with 'lat' and 'lng', or null if not found.
+ * Handles the expand and collapse functionality for the Labs section.
  */
-async function geocodeLocation(location) {
-    const encodedLocation = encodeURIComponent(location);
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedLocation}`;
+function handleLabsToggle() {
+    const labsHeader = document.querySelector('.labs-header');
+    const labsList = document.querySelector('.labs-list');
 
-    try {
-        const response = await fetch(url, {
-            headers: {
-                'Accept-Language': 'en',
-                'User-Agent': 'SKCET-Campus-Navigator/1.0' // Nominatim requires a valid User-Agent
-            }
-        });
-        const data = await response.json();
+    labsHeader.addEventListener('click', () => {
+        const isExpanded = labsHeader.getAttribute('aria-expanded') === 'true';
+        labsHeader.setAttribute('aria-expanded', !isExpanded);
+        labsList.classList.toggle('hidden');
+        labsHeader.querySelector('i').classList.toggle('fa-chevron-down');
+        labsHeader.querySelector('i').classList.toggle('fa-chevron-up');
+    });
 
-        if (data && data.length > 0) {
-            return {
-                lat: parseFloat(data[0].lat),
-                lng: parseFloat(data[0].lon)
-            };
-        } else {
-            return null;
+    // Allow keyboard interaction
+    labsHeader.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            labsHeader.click();
         }
-    } catch (error) {
-        console.error('Error geocoding location:', error);
-        return null;
-    }
+    });
 }
 
 // ===============================
-// 11. Handle Search Functionality
+// 11. Handle Location Selection
 // ===============================
 
 /**
- * Handles the search functionality, allowing users to search for locations.
- * Routes will always pass through the entrance.
- * @param {Object} map - The Leaflet map instance.
- * @param {Array} locations - An array of location objects.
+ * Adds click event listeners to location list items.
  */
-function handleSearch(map, locations) {
-    const searchButton = document.getElementById('search-button');
-    const searchInput = document.getElementById('search-input');
+function handleLocationSelection() {
+    const placeItems = document.querySelectorAll('.place-item');
 
-    // Initialize Awesomplete for autocomplete (Optional Enhancement)
-    // Ensure Awesomplete CSS and JS are included in index.html
-    if (typeof Awesomplete !== 'undefined') {
-        const list = locations.map(loc => loc.name);
-        new Awesomplete(searchInput, {
-            list: list,
-            minChars: 1,
-            maxItems: 10,
-            autoFirst: true
-        });
-    }
+    placeItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const lat = parseFloat(item.getAttribute('data-lat'));
+            const lng = parseFloat(item.getAttribute('data-lng'));
+            const locationName = item.textContent;
 
-    searchButton.addEventListener('click', () => {
-        const query = searchInput.value.trim().toLowerCase();
-        if (query === '') {
-            alert('Please enter a location to search.');
-            return;
-        }
+            destination = { lat: lat, lng: lng };
 
-        // Find the location that matches the query
-        const found = locations.find(loc => loc.name.toLowerCase() === query);
-
-        if (found) {
             if (userMarker) {
                 const userCoords = userMarker.getLatLng();
-
-                // If user's location is the entrance, plot route directly to destination
-                if (userCoords.lat === entranceCoordinate[0] && userCoords.lng === entranceCoordinate[1]) {
-                    plotRoute(entranceCoordinate, [found.latitude, found.longitude]);
-                } else {
-                    plotRoute(userCoords, [found.latitude, found.longitude]);
-                }
+                plotRoute({ lat: userCoords.lat, lng: userCoords.lng }, destination);
+                updateDistanceIndicator({ lat: userCoords.lat, lng: userCoords.lng }, destination);
             } else {
-                // Center the map on the found location
-                map.setView([found.latitude, found.longitude], 18);
-
-                // Open a popup at the found location
+                // Center the map on the selected location
+                map.setView([lat, lng], 18);
                 L.popup()
-                    .setLatLng([found.latitude, found.longitude])
-                    .setContent(`<b>${found.name}</b><br>Type: ${found.type}`)
+                    .setLatLng([lat, lng])
+                    .setContent(`<b>${locationName}</b>`)
                     .openOn(map);
             }
-        } else {
-            alert('Location not found! Please check the spelling or try a different search term.');
-        }
-    });
 
-    // Allow pressing Enter to trigger the search
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            searchButton.click();
-        }
+            // Close the sidebar after selection
+            const placesSidebar = document.getElementById('places-sidebar');
+            placesSidebar.classList.remove('open');
+            placesSidebar.setAttribute('aria-hidden', 'true');
+        });
     });
 }
 
 // ===============================
-// 12. Routing Panel for Mobile
+// 12. Handle Search Functionality
 // ===============================
 
 /**
- * Toggles the visibility of the routing panel on mobile devices.
+ * Filters the places list based on the search query.
  */
-function setupRoutingPanel() {
-    const routingButton = document.getElementById('routing-button');
-    const routingPanel = document.getElementById('routing-panel');
-    const routeButton = document.getElementById('route-button');
-    const startInput = document.getElementById('start-input');
-    const endInput = document.getElementById('end-input');
+function handleSearch() {
+    const searchInput = document.getElementById('places-search');
+    const placeItems = document.querySelectorAll('.place-item');
 
-    // Show the routing button on mobile
-    routingButton.classList.remove('hidden');
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.trim().toLowerCase();
 
-    // Toggle the routing panel when the button is clicked
-    routingButton.addEventListener('click', () => {
-        routingPanel.classList.toggle('active');
+        placeItems.forEach(item => {
+            if (item.textContent.toLowerCase().includes(query)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
     });
-
-    // Handle the route button click
-    routeButton.addEventListener('click', () => {
-        const startQuery = startInput.value.trim();
-        const endQuery = endInput.value.trim();
-
-        if (endQuery === '') {
-            alert('Please enter an end location.');
-            return;
-        }
-
-        if (startQuery === '' && userMarker) {
-            const userCoords = userMarker.getLatLng();
-            geocodeLocation(endQuery)
-                .then(endCoords => {
-                    if (endCoords) {
-                        plotRoute(userCoords, endCoords);
-                        routingPanel.classList.remove('active'); // Hide the panel after routing
-                    } else {
-                        alert('End location could not be found.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Geocoding error:', error);
-                    alert('An error occurred while geocoding the end location.');
-                });
-        } else if (startQuery !== '' && endQuery !== '') {
-            // Geocode both start and end locations
-            Promise.all([geocodeLocation(startQuery), geocodeLocation(endQuery)])
-                .then(([startCoords, endCoords]) => {
-                    if (startCoords && endCoords) {
-                        plotRoute(startCoords, endCoords);
-                        routingPanel.classList.remove('active'); // Hide the panel after routing
-                    } else {
-                        alert('One or both locations could not be found.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Geocoding error:', error);
-                    alert('An error occurred while geocoding the locations.');
-                });
-        } else {
-            alert('Please enter both start and end locations.');
-        }
-    });
-}
-
-/**
- * Initializes the custom routing panel for mobile devices.
- */
-function initializeRoutingPanel() {
-    // Detect if the device is mobile based on screen width
-    const isMobile = window.matchMedia("(max-width: 768px)").matches;
-
-    if (isMobile) {
-        setupRoutingPanel();
-    }
 }
 
 // ===============================
@@ -437,7 +368,7 @@ function initializeRoutingPanel() {
 /**
  * Plots a route from the start point to the end point via the entrance.
  * @param {Object} start - The starting point with 'lat' and 'lng' properties.
- * @param {Array|Object} end - The ending point as [latitude, longitude] or {lat, lng}.
+ * @param {Object} end - The ending point with 'lat' and 'lng' properties.
  */
 function plotRoute(start, end) {
     console.log("Initiating route calculation.");
@@ -460,16 +391,8 @@ function plotRoute(start, end) {
     // Add entrance
     waypoints.push(entrance);
 
-    // Determine end coordinates
-    let endCoords;
-    if (Array.isArray(end)) {
-        endCoords = L.latLng(end[0], end[1]);
-    } else {
-        endCoords = L.latLng(end.lat, end.lng);
-    }
-
     // Add end waypoint
-    waypoints.push(endCoords);
+    waypoints.push(L.latLng(end.lat, end.lng));
 
     routingControl = L.Routing.control({
         waypoints: waypoints,
@@ -480,7 +403,11 @@ function plotRoute(start, end) {
         draggableWaypoints: false,
         fitSelectedRoutes: true,
         show: true,
-        routeWhileDragging: false
+        routeWhileDragging: false,
+        router: L.Routing.osrmv1({
+            language: 'en',
+            profile: 'walking'
+        })
     }).addTo(map);
 
     // Listen for routing events to handle success or error
@@ -495,7 +422,70 @@ function plotRoute(start, end) {
 }
 
 // ===============================
-// 14. Load Custom Road GeoJSON
+// 14. Distance Indicator Control
+// ===============================
+
+/**
+ * Creates a custom Leaflet control to display the distance and ETA between two points.
+ */
+function createDistanceIndicator() {
+    distanceIndicatorControl = L.control({ position: 'bottomright' });
+
+    distanceIndicatorControl.onAdd = function (map) {
+        const div = L.DomUtil.create('div', 'distance-indicator hidden');
+        div.innerHTML = 'Distance: 0 m<br>ETA: 0 min';
+        return div;
+    };
+
+    distanceIndicatorControl.addTo(map);
+}
+
+/**
+ * Updates the distance indicator with the current distance between user and destination.
+ * Also calculates estimated walking time assuming average speed of 5 km/h.
+ * @param {Object} userCoords - The user's current coordinates with 'lat' and 'lng'.
+ * @param {Object} destCoords - The destination coordinates with 'lat' and 'lng'.
+ */
+function updateDistanceIndicator(userCoords, destCoords) {
+    if (!distanceIndicatorControl) {
+        createDistanceIndicator();
+    }
+
+    const div = distanceIndicatorControl.getContainer();
+    div.classList.remove('hidden');
+
+    const userLatLng = L.latLng(userCoords.lat, userCoords.lng);
+    const destLatLng = L.latLng(destCoords.lat, destCoords.lng);
+    const distance = userLatLng.distanceTo(destLatLng); // in meters
+
+    const distanceInMeters = Math.round(distance);
+    const distanceInKilometers = (distance / 1000).toFixed(2);
+
+    // Calculate estimated walking time (assuming 5 km/h)
+    const walkingSpeed = 5; // km/h
+    const estimatedTimeHours = distance / 1000 / walkingSpeed;
+    const estimatedTimeMinutes = Math.round(estimatedTimeHours * 60);
+
+    let displayDistance = distance < 1000 ? `${distanceInMeters} m` : `${distanceInKilometers} km`;
+    let displayTime = estimatedTimeMinutes > 0 ? `${estimatedTimeMinutes} min` : `${Math.round(distance / (5 * 1000 / 60))} sec`;
+
+    div.innerHTML = `
+        <strong>Distance:</strong> ${displayDistance}<br>
+        <strong>ETA:</strong> ${displayTime}
+    `;
+}
+
+/**
+ * Hides the distance indicator.
+ */
+function hideDistanceIndicator() {
+    if (distanceIndicatorControl) {
+        distanceIndicatorControl.getContainer().classList.add('hidden');
+    }
+}
+
+// ===============================
+// 15. Load Custom Road GeoJSON
 // ===============================
 
 /**
@@ -525,7 +515,7 @@ async function loadCustomRoads() {
 }
 
 // ===============================
-// 15. Initialization Function
+// 16. Initialization Function
 // ===============================
 
 /**
@@ -534,11 +524,13 @@ async function loadCustomRoads() {
 async function init() {
     const locations = await loadLocations();
     addMarkers(map, locations);
-    handleSearch(map, locations);
+    handleSidebar();
+    handleLabsToggle();
+    handleLocationSelection();
+    handleSearch();
     trackUserLocation();
-    handleLocateButton();
     await loadCustomRoads(); // Load custom roads after other initializations
-    initializeRoutingPanel(); // Initialize the custom routing panel
+    createDistanceIndicator(); // Initialize the distance indicator
 }
 
 window.onload = init;

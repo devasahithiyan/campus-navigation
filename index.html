@@ -8,20 +8,56 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <!-- Leaflet Routing Machine CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
-    <!-- Awesomplete CSS for Autocomplete (Optional) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.css" integrity="sha512-rvyIR8x9ff3kKgH1HzrtVasGWy5a1fUkYUBqJ+WlVMHFxP2wm1EVUAf4J1iP4zSphHJjN87DGnjzx3XEKSlrZA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pok6HbBErT+vMI+pq+RkXQAXP2oH4kR9dfB6nOZ2O5iG1pjRlq8o/uN6G0V6iQmK0pPTB/QW7VxruqIIF6OVhQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
     <header>
         <h1>SKCET Campus Navigator</h1>
-        <div class="search-container">
-            <input type="text" id="search-input" placeholder="Search for a location..." aria-label="Search for a location">
-            <button id="search-button" aria-label="Search">Search</button>
-            <button id="locate-button" aria-label="Locate Me">My Location</button> <!-- Locate Me Button -->
-        </div>
+        <button id="view-places-button" aria-label="View Places"><i class="fas fa-map-marker-alt"></i> View Places</button>
     </header>
+
+    <!-- Sidebar for Places -->
+    <aside id="places-sidebar" aria-hidden="true">
+        <div class="sidebar-header">
+            <h2>Places</h2>
+            <button id="close-sidebar-button" aria-label="Close Places"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="sidebar-content">
+            <input type="text" id="places-search" placeholder="Search locations..." aria-label="Search locations">
+            <ul class="places-list">
+                <li class="place-item" data-lat="10.9395" data-lng="76.9522">Library</li>
+                <li class="place-item" data-lat="10.938722202923008" data-lng="76.9566800531989">Food court</li>
+                <li class="place-item" data-lat="10.937779571414586" data-lng="76.95638488209566">Admin block</li>
+                <li class="place-item" data-lat="10.937315353463866" data-lng="76.95697176899634">Sports Ground</li>
+                <!-- Expandable Labs Section -->
+                <li class="labs-header" aria-expanded="false" tabindex="0">
+                    <span>Academic blocks <i class="fas fa-chevron-down"></i></span>
+                </li>
+                <ul class="labs-list hidden">
+                    <li class="place-item" data-lat="10.937190115649132" data-lng="76.95616602213165">C1 block</li>
+                    <li class="place-item" data-lat="10.937216352340572" data-lng="76.95656222244696">C2 Block</li>
+                    <li class="place-item" data-lat="10.93641516063983" data-lng="76.95590294859045">Civil Block</li>
+
+                    <li class="place-item" data-lat="10.9362490778562" data-lng="76.95621772366506">ECE Block</li>
+                    
+                    <!-- Add more labs as needed -->
+                </ul>
+                <li class="labs-header" aria-expanded="false" tabindex="0">
+                    <span>Labs <i class="fas fa-chevron-down"></i></span>
+                </li>
+                <ul class="labs-list hidden">
+                    <li class="place-item" data-lat="10.9401" data-lng="76.9523">Computer Lab</li>
+                    <li class="place-item" data-lat="10.9402" data-lng="76.9524">Physics Lab</li>
+                    <li class="place-item" data-lat="10.9403" data-lng="76.9525">Chemistry Lab</li>
+                    <li class="place-item" data-lat="10.9404" data-lng="76.9526">Biology Lab</li>
+                    <!-- Add more labs as needed -->
+                </ul>
+            </ul>
+        </div>
+    </aside>
 
     <main>
         <div id="map"></div>
@@ -31,15 +67,10 @@
         <p>&copy; 2024 SKCET Campus Navigator</p>
     </footer>
 
-    <!-- Custom Routing Button for Mobile -->
-    <button id="routing-button" class="hidden" aria-label="Open Directions Panel">Directions</button>
-
-    <!-- Custom Routing Panel for Mobile -->
-    <div id="routing-panel" class="hidden" aria-live="polite">
-        <h3>Get Directions</h3>
-        <input type="text" id="start-input" placeholder="Start Location" aria-label="Start Location">
-        <input type="text" id="end-input" placeholder="End Location" aria-label="End Location">
-        <button id="route-button" aria-label="Get Route">Get Route</button>
+    <!-- Distance Indicator -->
+    <div class="distance-indicator hidden" aria-live="polite">
+        Distance: 0 m<br>
+        ETA: 0 min
     </div>
 
     <!-- Leaflet JS -->
@@ -48,8 +79,6 @@
     <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
     <!-- Leaflet Control Geocoder (optional for better geocoding) -->
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-    <!-- Awesomplete JS for Autocomplete (Optional) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.js" integrity="sha512-gbLWZFSIW6eizSEulNNsjPHxtSC99fjRnBvklhI7YAG+7sYc16iXyW+HCe+6TZPU9LPbYVM14H/xQh71Uv6Fgw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <!-- Custom JS -->
     <script src="js/script.js"></script>
 </body>
