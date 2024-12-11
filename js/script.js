@@ -240,6 +240,11 @@ function trackUserLocation() {
             plotRoute({ lat: latitude, lng: longitude }, destination);
             updateDistanceIndicator({ lat: latitude, lng: longitude }, destination);
         }
+
+        // Auto-follow logic
+        if (window.isUserFollowing && !window.userInteracted) {
+            map.setView([latitude, longitude], map.getZoom());
+        }
     }
 
     function error(err) {
@@ -358,7 +363,7 @@ function handleLocationSelection() {
         item.addEventListener('click', () => {
             const lat = parseFloat(item.getAttribute('data-lat'));
             const lng = parseFloat(item.getAttribute('data-lng'));
-            const locationName = item.textContent;
+            const locationName = item.textContent.trim();
 
             destination = { lat: lat, lng: lng };
 
@@ -375,6 +380,9 @@ function handleLocationSelection() {
                     .openOn(map);
             }
 
+            // Automatically zoom into the selected destination
+            flyToDestination(lat, lng);
+
             // Close the sidebar after selection
             closeSidebar();
         });
@@ -386,6 +394,30 @@ function handleLocationSelection() {
                 item.click();
             }
         });
+    });
+}
+
+/**
+ * Smoothly flies the map view to the specified latitude and longitude with a defined zoom level.
+ * @param {number} lat - Latitude of the destination.
+ * @param {number} lng - Longitude of the destination.
+ */
+function flyToDestination(lat, lng) {
+    const zoomLevel = 19; // Adjust as needed (Leaflet zoom levels typically range from 0 to 20+)
+
+    // If Follow User is enabled, disable it when flying to a destination
+    if (window.isUserFollowing) {
+        const followButton = document.querySelector('.follow-user-button');
+        if (followButton) {
+            // Simulate a button click to disable following
+            followButton.click();
+        }
+    }
+
+    // Fly to the destination smoothly
+    map.flyTo([lat, lng], zoomLevel, {
+        duration: 2, // Duration in seconds
+        easeLinearity: 0.25
     });
 }
 
@@ -452,7 +484,7 @@ function plotRoute(start, end) {
             },
             addWaypoints: false,
             draggableWaypoints: false,
-            fitSelectedRoutes: true,
+            fitSelectedRoutes: false, // Prevent automatic fitting of routes
             show: true, // Show the instruction panel
             showAlternatives: false,
             routeWhileDragging: false,
@@ -471,7 +503,7 @@ function plotRoute(start, end) {
         // Add a close button to the routing instructions on mobile
         addRoutingCloseButton();
     } else {
-        // Update waypoints to prevent flickering
+        // Update waypoints to prevent flickering and avoid auto-fitting
         routingControl.setWaypoints([
             L.latLng(start.lat, start.lng),
             L.latLng(entranceCoordinate[0], entranceCoordinate[1]),
@@ -615,7 +647,88 @@ async function loadCustomRoads() {
 }
 
 // ===============================
-// 17. Initialization Function
+// 17. Follow User Toggle Functionality
+// ===============================
+
+/**
+ * Adds a toggle button to enable or disable following the user's location.
+ */
+function addFollowUserToggle() {
+    // Create the toggle button
+    const followButton = L.control({ position: 'topright' });
+
+    followButton.onAdd = function(map) {
+        const btn = L.DomUtil.create('button', 'follow-user-button');
+        btn.innerHTML = '<i class="fas fa-bullseye"></i>';
+        btn.title = 'Follow Your Location';
+        btn.style.backgroundColor = '#fff';
+        btn.style.border = 'none';
+        btn.style.padding = '8px';
+        btn.style.borderRadius = '4px';
+        btn.style.cursor = 'pointer';
+        btn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+
+        // State to track if following is enabled
+        let isFollowing = true;
+
+        btn.addEventListener('click', () => {
+            isFollowing = !isFollowing;
+            window.isUserFollowing = isFollowing; // Update global flag
+            window.userInteracted = !isFollowing; // Update interaction flag
+
+            if (isFollowing) {
+                btn.innerHTML = '<i class="fas fa-bullseye"></i>';
+                btn.title = 'Follow Your Location';
+                // If following is re-enabled, recenter the map
+                if (userMarker) {
+                    map.setView(userMarker.getLatLng(), map.getZoom());
+                }
+            } else {
+                btn.innerHTML = '<i class="fas fa-bullseye-slash"></i>';
+                btn.title = 'Stop Following';
+            }
+        });
+
+        return btn;
+    };
+
+    followButton.addTo(map);
+
+    // Initialize the following flag
+    window.isUserFollowing = true;
+    window.userInteracted = false;
+
+    // Track user interactions to disable following
+    map.on('zoomstart move', () => {
+        window.isUserFollowing = false;
+        window.userInteracted = true;
+        // Update the button to show 'Stop Following' if it was following
+        const btn = document.querySelector('.follow-user-button');
+        if (btn && !btn.classList.contains('active')) {
+            btn.innerHTML = '<i class="fas fa-bullseye-slash"></i>';
+            btn.title = 'Stop Following';
+        }
+    });
+
+    // Optional: Add a timeout to re-enable following after inactivity
+    let interactionTimeout;
+    map.on('zoomend moveend', () => {
+        clearTimeout(interactionTimeout);
+        interactionTimeout = setTimeout(() => {
+            if (window.isUserFollowing && !window.userInteracted) {
+                const btn = document.querySelector('.follow-user-button');
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-bullseye"></i>';
+                    btn.title = 'Follow Your Location';
+                }
+            }
+            window.userInteracted = false;
+        }, 10000); // 10 seconds of inactivity
+    });
+}
+
+// ===============================
+// 18. Initialization Function
 // ===============================
 
 /**
@@ -629,6 +742,7 @@ async function init() {
     handleLocationSelection();
     handleSearch();
     trackUserLocation();
+    addFollowUserToggle(); // Add the follow user toggle button
     await loadCustomRoads(); // Load custom roads after other initializations
     createDistanceIndicator(); // Initialize the distance indicator
 }

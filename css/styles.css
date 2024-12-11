@@ -394,6 +394,7 @@ footer p {
         border-radius: 8px;
         padding: 10px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        position: relative; /* To position the close button */
     }
 
     /* Close button for routing instructions on mobile */
@@ -436,6 +437,14 @@ footer p {
     .leaflet-routing-container .leaflet-routing-alt {
         display: none; /* Hide alternative routes */
     }
+
+    /* ========================================
+       11.8 Follow User Button Styling
+    ======================================== */
+
+    .follow-user-button {
+        /* Styles are handled inline in the script.js for simplicity */
+    }
 }
 
 /* ========================================
@@ -446,7 +455,8 @@ footer p {
 .place-item:focus,
 .labs-header:focus,
 #view-places-button:focus,
-#close-sidebar-button:focus {
+#close-sidebar-button:focus,
+.follow-user-button:focus {
     outline: 2px solid #2980b9;
     outline-offset: 2px;
 }
