@@ -6,7 +6,9 @@
 
 /*
  * Initializes the Leaflet map, adds markers, handles sidebar navigation and location selection,
- * tracks user location in real-time, and displays a distance indicator.
+ * tracks user location in real-time, checks if the user is within the campus boundary,
+ * displays a customized popup message if they're outside the premises,
+ * and manages routing and distance indicators.
  */
 
 // ===============================
@@ -16,6 +18,7 @@
 const campusCoordinates = [10.93919538852309, 76.95196394531337];
 const map = L.map('map').setView(campusCoordinates, 18);
 
+// Add OpenStreetMap tile layer
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
@@ -46,7 +49,7 @@ const campusBoundaryCoordinates = [
     [10.939331725891414, 76.95205903546925] // Closing the polygon by repeating the first coordinate
 ];
 
-L.polygon(campusBoundaryCoordinates, {
+const campusBoundary = L.polygon(campusBoundaryCoordinates, {
     color: "#ff7800",
     weight: 2,
     fillOpacity: 0.1
@@ -61,7 +64,7 @@ const entranceCoordinate = [10.93907701406342, 76.95194231481806];
 
 L.marker(entranceCoordinate, {
     icon: L.icon({
-        iconUrl: '../assets/entrance.png', // Ensure this path is correct
+        iconUrl: 'assets/entrance.png', // Ensure this path is correct
         iconSize: [30, 30],
         iconAnchor: [15, 30],
         popupAnchor: [0, -30]
@@ -75,37 +78,37 @@ L.marker(entranceCoordinate, {
 
 const icons = {
     Library: L.icon({
-        iconUrl: '../assets/library.png',
+        iconUrl: 'assets/library.png',
         iconSize: [30, 30],
         iconAnchor: [15, 30],
         popupAnchor: [0, -30]
     }),
     Academic: L.icon({
-        iconUrl: '../assets/academic.png',
+        iconUrl: 'assets/academic.png',
         iconSize: [30, 30],
         iconAnchor: [15, 30],
         popupAnchor: [0, -30]
     }),
     Food: L.icon({
-        iconUrl: '../assets/food.png',
+        iconUrl: 'assets/food.png',
         iconSize: [30, 30],
         iconAnchor: [15, 30],
         popupAnchor: [0, -30]
     }),
     Accommodation: L.icon({
-        iconUrl: '../assets/accommodation.png',
+        iconUrl: 'assets/accommodation.png',
         iconSize: [30, 30],
         iconAnchor: [15, 30],
         popupAnchor: [0, -30]
     }),
     Recreation: L.icon({
-        iconUrl: '../assets/recreation.png',
+        iconUrl: 'assets/recreation.png',
         iconSize: [30, 30],
         iconAnchor: [15, 30],
         popupAnchor: [0, -30]
     }),
     Default: L.icon({
-        iconUrl: '../assets/default.png',
+        iconUrl: 'assets/default.png',
         iconSize: [30, 30],
         iconAnchor: [15, 30],
         popupAnchor: [0, -30]
@@ -170,7 +173,12 @@ function addMarkers(map, locations) {
  */
 function trackUserLocation() {
     if (!navigator.geolocation) {
-        alert('Geolocation is not supported by your browser.');
+        Swal.fire({
+            icon: 'error',
+            title: 'Geolocation Not Supported',
+            text: 'Your browser does not support geolocation. Please use a compatible browser.',
+            confirmButtonText: 'OK'
+        });
         return;
     }
 
@@ -179,6 +187,8 @@ function trackUserLocation() {
         maximumAge: 0,
         timeout: 27000
     };
+
+    let isUserInside = true; // Flag to track user's campus status
 
     function success(position) {
         const latitude  = position.coords.latitude;
@@ -190,7 +200,7 @@ function trackUserLocation() {
         if (!userMarker) {
             userMarker = L.marker([latitude, longitude], { 
                 icon: L.icon({
-                    iconUrl: '../assets/user-location.png', // Ensure this path is correct
+                    iconUrl: 'assets/user-location.png', // Ensure this path is correct
                     iconSize: [30, 30],
                     iconAnchor: [15, 30],
                     popupAnchor: [0, -30]
@@ -205,6 +215,26 @@ function trackUserLocation() {
             userMarker.setLatLng([latitude, longitude]);
         }
 
+        // Check if user is inside campus boundary
+        const userPoint = turf.point([longitude, latitude]);
+        const campusPolygon = turf.polygon([campusBoundaryCoordinates.map(coord => [coord[1], coord[0]])]); // [lng, lat]
+        const isInside = turf.booleanPointInPolygon(userPoint, campusPolygon);
+
+        if (!isInside && isUserInside) {
+            // User has moved from inside to outside
+            isUserInside = false;
+            showOutsideCampusPopup();
+        } else if (isInside && !isUserInside) {
+            // User has moved from outside to inside
+            isUserInside = true;
+            Swal.fire({
+                icon: 'success',
+                title: 'Welcome Back!',
+                text: 'You have entered the campus premises.',
+                confirmButtonText: 'OK'
+            });
+        }
+
         // If a destination is set, update the route and distance
         if (destination) {
             plotRoute({ lat: latitude, lng: longitude }, destination);
@@ -214,20 +244,27 @@ function trackUserLocation() {
 
     function error(err) {
         console.warn(`ERROR(${err.code}): ${err.message}`);
+        let errorMessage = '';
         switch(err.code) {
             case err.PERMISSION_DENIED:
-                alert("Permission denied. Unable to access your location.");
+                errorMessage = "Permission denied. Unable to access your location.";
                 break;
             case err.POSITION_UNAVAILABLE:
-                alert("Position unavailable. Please check your network or GPS.");
+                errorMessage = "Position unavailable. Please check your network or GPS.";
                 break;
             case err.TIMEOUT:
-                alert("Geolocation request timed out. Please try again.");
+                errorMessage = "Geolocation request timed out. Please try again.";
                 break;
             default:
-                alert("An unknown error occurred.");
+                errorMessage = "An unknown error occurred.";
                 break;
         }
+        Swal.fire({
+            icon: 'error',
+            title: 'Geolocation Error',
+            text: errorMessage,
+            confirmButtonText: 'OK'
+        });
     }
 
     navigator.geolocation.watchPosition(success, error, options);
@@ -245,7 +282,8 @@ function handleSidebar() {
     const closeSidebarButton = document.getElementById('close-sidebar-button');
     const placesSidebar = document.getElementById('places-sidebar');
 
-    viewPlacesButton.addEventListener('click', () => {
+    viewPlacesButton.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent click from bubbling to document
         const isOpen = placesSidebar.classList.contains('open');
         if (isOpen) {
             placesSidebar.classList.remove('open');
@@ -268,6 +306,11 @@ function handleSidebar() {
             placesSidebar.setAttribute('aria-hidden', 'true');
         }
     });
+
+    // Prevent clicks inside the sidebar from closing it
+    placesSidebar.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
 }
 
 // ===============================
@@ -275,26 +318,29 @@ function handleSidebar() {
 // ===============================
 
 /**
- * Handles the expand and collapse functionality for the Labs section.
+ * Handles the expand and collapse functionality for multiple Labs sections.
  */
 function handleLabsToggle() {
-    const labsHeader = document.querySelector('.labs-header');
-    const labsList = document.querySelector('.labs-list');
+    const labsHeaders = document.querySelectorAll('.labs-header');
 
-    labsHeader.addEventListener('click', () => {
-        const isExpanded = labsHeader.getAttribute('aria-expanded') === 'true';
-        labsHeader.setAttribute('aria-expanded', !isExpanded);
-        labsList.classList.toggle('hidden');
-        labsHeader.querySelector('i').classList.toggle('fa-chevron-down');
-        labsHeader.querySelector('i').classList.toggle('fa-chevron-up');
-    });
+    labsHeaders.forEach(header => {
+        header.addEventListener('click', () => {
+            const isExpanded = header.getAttribute('aria-expanded') === 'true';
+            header.setAttribute('aria-expanded', !isExpanded);
+            const labsList = header.nextElementSibling;
+            labsList.classList.toggle('hidden');
+            const icon = header.querySelector('i');
+            icon.classList.toggle('fa-chevron-down');
+            icon.classList.toggle('fa-chevron-up');
+        });
 
-    // Allow keyboard interaction
-    labsHeader.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            labsHeader.click();
-        }
+        // Allow keyboard interaction
+        header.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                header.click();
+            }
+        });
     });
 }
 
@@ -330,11 +376,30 @@ function handleLocationSelection() {
             }
 
             // Close the sidebar after selection
-            const placesSidebar = document.getElementById('places-sidebar');
-            placesSidebar.classList.remove('open');
-            placesSidebar.setAttribute('aria-hidden', 'true');
+            closeSidebar();
+        });
+
+        // Allow keyboard interaction
+        item.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                item.click();
+            }
         });
     });
+}
+
+/**
+ * Closes the places sidebar.
+ */
+function closeSidebar() {
+    const placesSidebar = document.getElementById('places-sidebar');
+    const viewPlacesButton = document.getElementById('view-places-button');
+
+    if (placesSidebar.classList.contains('open')) {
+        placesSidebar.classList.remove('open');
+        placesSidebar.setAttribute('aria-hidden', 'true');
+    }
 }
 
 // ===============================
@@ -362,63 +427,80 @@ function handleSearch() {
 }
 
 // ===============================
-// 13. Function to Plot a Route Through Entrance
+// 13. Function to Plot a Route with Navigation Instructions
 // ===============================
 
 /**
- * Plots a route from the start point to the end point via the entrance.
+ * Plots a route from the start point to the end point via the entrance with navigation instructions.
+ * Initializes the routing control once and updates waypoints dynamically to prevent blinking.
  * @param {Object} start - The starting point with 'lat' and 'lng' properties.
  * @param {Object} end - The ending point with 'lat' and 'lng' properties.
  */
 function plotRoute(start, end) {
     console.log("Initiating route calculation.");
 
-    if (routingControl) {
-        map.removeControl(routingControl);
+    if (!routingControl) {
+        // Initialize routing control once
+        routingControl = L.Routing.control({
+            waypoints: [
+                L.latLng(start.lat, start.lng),
+                L.latLng(entranceCoordinate[0], entranceCoordinate[1]),
+                L.latLng(end.lat, end.lng)
+            ],
+            lineOptions: {
+                styles: [{ color: '#6FA1EC', weight: 4 }]
+            },
+            addWaypoints: false,
+            draggableWaypoints: false,
+            fitSelectedRoutes: true,
+            show: true, // Show the instruction panel
+            showAlternatives: false,
+            routeWhileDragging: false,
+            router: L.Routing.osrmv1({
+                language: 'en',
+                profile: 'walking'
+            }),
+            createMarker: function(i, waypoint, n) {
+                return L.marker(waypoint.latLng, {
+                    icon: icons.Default
+                });
+            },
+            routeDragInterval: 1000
+        }).addTo(map);
+
+        // Add a close button to the routing instructions on mobile
+        addRoutingCloseButton();
+    } else {
+        // Update waypoints to prevent flickering
+        routingControl.setWaypoints([
+            L.latLng(start.lat, start.lng),
+            L.latLng(entranceCoordinate[0], entranceCoordinate[1]),
+            L.latLng(end.lat, end.lng)
+        ]);
     }
+}
 
-    // Define the entrance as an intermediate waypoint
-    const entrance = L.latLng(entranceCoordinate[0], entranceCoordinate[1]);
+/**
+ * Adds a custom close button to the Leaflet Routing Machine instruction panel.
+ * This allows users to close the navigation instructions manually.
+ */
+function addRoutingCloseButton() {
+    // Delay to ensure the routing container is available
+    setTimeout(() => {
+        const routingContainer = document.querySelector('.leaflet-routing-container');
+        if (routingContainer && !routingContainer.querySelector('.routing-close-button')) {
+            const closeButton = document.createElement('button');
+            closeButton.className = 'routing-close-button';
+            closeButton.innerHTML = '<i class="fas fa-times"></i>';
+            routingContainer.appendChild(closeButton);
 
-    // Initialize waypoints
-    let waypoints = [];
-
-    // If start is not the entrance, add it
-    if (!(start.lat === entrance.lat && start.lng === entrance.lng)) {
-        waypoints.push(L.latLng(start.lat, start.lng));
-    }
-
-    // Add entrance
-    waypoints.push(entrance);
-
-    // Add end waypoint
-    waypoints.push(L.latLng(end.lat, end.lng));
-
-    routingControl = L.Routing.control({
-        waypoints: waypoints,
-        lineOptions: {
-            styles: [{ color: '#6FA1EC', weight: 4 }]
-        },
-        addWaypoints: false,
-        draggableWaypoints: false,
-        fitSelectedRoutes: true,
-        show: true,
-        routeWhileDragging: false,
-        router: L.Routing.osrmv1({
-            language: 'en',
-            profile: 'walking'
-        })
-    }).addTo(map);
-
-    // Listen for routing events to handle success or error
-    routingControl.on('routesfound', function(e) {
-        console.log("Route found.");
-    });
-
-    routingControl.on('routingerror', function(e) {
-        console.log("Routing error.");
-        alert("An error occurred while calculating the route.");
-    });
+            closeButton.addEventListener('click', () => {
+                routingControl.setWaypoints([]);
+                routingContainer.style.display = 'none';
+                hideDistanceIndicator();
+            });
+        }
+    }, 1000); // Adjust timeout as needed based on map loading speed
 }
 
 // ===============================
@@ -454,9 +536,9 @@ function updateDistanceIndicator(userCoords, destCoords) {
     const div = distanceIndicatorControl.getContainer();
     div.classList.remove('hidden');
 
-    const userLatLng = L.latLng(userCoords.lat, userCoords.lng);
-    const destLatLng = L.latLng(destCoords.lat, destCoords.lng);
-    const distance = userLatLng.distanceTo(destLatLng); // in meters
+    const userPoint = turf.point([userCoords.lng, userCoords.lat]);
+    const destPoint = turf.point([destCoords.lng, destCoords.lat]);
+    const distance = turf.distance(userPoint, destPoint, { units: 'meters' }); // in meters
 
     const distanceInMeters = Math.round(distance);
     const distanceInKilometers = (distance / 1000).toFixed(2);
@@ -485,7 +567,25 @@ function hideDistanceIndicator() {
 }
 
 // ===============================
-// 15. Load Custom Road GeoJSON
+// 15. Function to Show Outside Campus Popup
+// ===============================
+
+/**
+ * Displays a popup message when the user is outside the campus premises.
+ */
+function showOutsideCampusPopup() {
+    Swal.fire({
+        icon: 'warning',
+        title: 'Outside Campus',
+        text: 'You are currently outside the campus premises. For the best experience, please enter the college grounds.',
+        confirmButtonText: 'OK',
+        backdrop: true,
+        allowOutsideClick: true
+    });
+}
+
+// ===============================
+// 16. Load Custom Road GeoJSON
 // ===============================
 
 /**
@@ -515,7 +615,7 @@ async function loadCustomRoads() {
 }
 
 // ===============================
-// 16. Initialization Function
+// 17. Initialization Function
 // ===============================
 
 /**

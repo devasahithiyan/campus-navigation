@@ -105,7 +105,7 @@ header h1 {
     background: none;
     border: none;
     color: white;
-    font-size: 1.2em;
+    font-size: 1.5em;
     cursor: pointer;
 }
 
@@ -381,6 +381,60 @@ footer p {
     
     footer p {
         font-size: 0.8em;
+    }
+
+    /* ========================================
+       11.7 Leaflet Routing Panel Adjustments for Mobile
+    ======================================== */
+    
+    .leaflet-routing-container {
+        max-height: 40vh; /* Reduced height for better visibility */
+        overflow-y: auto;
+        background-color: rgba(255, 255, 255, 0.95); /* Slightly transparent for better aesthetics */
+        border-radius: 8px;
+        padding: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    /* Close button for routing instructions on mobile */
+    .leaflet-routing-container a.leaflet-routing-hide {
+        display: none;
+    }
+
+    /* Add a custom close button */
+    .routing-close-button {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: #fff;
+        border: none;
+        border-radius: 50%;
+        padding: 5px;
+        cursor: pointer;
+        z-index: 2000;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .routing-close-button i {
+        color: #3498db;
+        font-size: 16px;
+    }
+
+    /* Improve the appearance of routing instructions */
+    .leaflet-routing-container .instructions {
+        font-size: 0.9em;
+    }
+
+    .leaflet-routing-container .leaflet-routing-geocoder {
+        display: none; /* Hide geocoder in the routing panel */
+    }
+
+    .leaflet-routing-container .leaflet-routing-container div {
+        padding: 5px 0;
+    }
+
+    .leaflet-routing-container .leaflet-routing-alt {
+        display: none; /* Hide alternative routes */
     }
 }
 
